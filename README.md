@@ -230,4 +230,4 @@ Please report issues with the Home Assistant version, integration version, relev
 
 ## License
 
-No license has been selected yet.
+Licensed under the [MIT License](LICENSE).

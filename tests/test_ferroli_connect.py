@@ -1,9 +1,12 @@
 """Focused contract and safety tests; no cloud or MQTT is contacted."""
+import ast
+import asyncio
 import json
 import importlib
 import sys
 import types
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 ROOT = Path(__file__).parents[1] / "custom_components" / "ferroli_connect"
 
@@ -24,8 +27,42 @@ def test_aiomqtt_v2_tls_constructor_contract():
     requirement = next(r for r in manifest["requirements"] if r.startswith("aiomqtt"))
     assert ">=2.5.0" in requirement and "<3" in requirement
     runtime = (ROOT / "runtime.py").read_text()
-    assert '"tls_context": ssl.create_default_context()' in runtime
+    assert 'from homeassistant.util.ssl import client_context' in runtime
+    assert '"tls_context": client_context()' in runtime
+    assert 'ssl.create_default_context' not in runtime
+    assert 'client_context_no_verify' not in runtime
     assert '"ssl_context":' not in runtime
+
+
+def test_setup_failure_closes_runtime_and_delegates_reauth_to_home_assistant():
+    # Isolate the setup handler without importing Home Assistant or contacting MQTT.
+    setup = ast.parse((ROOT / "__init__.py").read_text())
+    function = next(node for node in setup.body
+                    if isinstance(node, ast.AsyncFunctionDef) and node.name == "async_setup_entry")
+    auth_failed = type("ConfigEntryAuthFailed", (Exception,), {})
+
+    async def check(error, expected_type):
+        runtime = types.SimpleNamespace(start=AsyncMock(side_effect=error), close=AsyncMock())
+        namespace = {
+            "HomeAssistant": object, "ConfigEntry": object,
+            "FerroliRuntime": lambda *args: runtime, "ConfigEntryAuthFailed": auth_failed,
+        }
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(ROOT / "__init__.py"),
+                     "exec"), namespace)
+        # No config_entries manager: authentication failure must only raise for HA to handle.
+        try:
+            await namespace["async_setup_entry"](object(), object())
+        except expected_type as err:
+            if isinstance(error, PermissionError):
+                assert err.__cause__ is error
+            else:
+                assert err is error
+        else:
+            raise AssertionError("setup failure was swallowed")
+        runtime.close.assert_awaited_once_with()
+
+    asyncio.run(check(PermissionError("expired"), auth_failed))
+    asyncio.run(check(RuntimeError("setup failed"), RuntimeError))
 
 
 def test_climate_does_not_claim_unverified_control_or_state():

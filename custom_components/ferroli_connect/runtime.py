@@ -3,12 +3,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import ssl
 import time
 from collections.abc import Callable
 
 import aiomqtt
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.util.ssl import client_context
 
 from .api import FerroliApi
 from .codec import decode_boiler_telemetry, parse_thermostat_points, query_packet
@@ -66,7 +66,7 @@ class FerroliRuntime:
             "hostname": config["domain"], "port": int(config["ssl_port"]),
             "username": mqtt_user,
             "password": mqtt_token["token"].encode("utf-8"),
-            "tls_context": ssl.create_default_context(),
+            "tls_context": client_context(),
             "identifier": self._client_id,
         }
         children = device.get("child_devices", [])

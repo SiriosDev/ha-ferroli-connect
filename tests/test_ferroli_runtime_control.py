@@ -23,7 +23,11 @@ def _install_import_stubs():
     helpers = types.ModuleType("homeassistant.helpers")
     aiohttp_client = types.ModuleType("homeassistant.helpers.aiohttp_client")
     aiohttp_client.async_get_clientsession = lambda hass: None
+    ssl_helper = types.ModuleType("homeassistant.util.ssl")
+    ssl_helper.client_context = lambda: object()
     sys.modules.update({"homeassistant": ha, "homeassistant.helpers": helpers,
+                        "homeassistant.util": types.ModuleType("homeassistant.util"),
+                        "homeassistant.util.ssl": ssl_helper,
                         "homeassistant.helpers.aiohttp_client": aiohttp_client})
     api = types.ModuleType("custom_components.ferroli_connect.api")
     api.FerroliApi = type("FerroliApi", (), {})

@@ -65,7 +65,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await runtime.start()
     except PermissionError as err:
         await runtime.close()
-        await hass.config_entries.async_start_reauth(entry)
         raise ConfigEntryAuthFailed("Ferroli authentication expired") from err
     except Exception:
         await runtime.close()
