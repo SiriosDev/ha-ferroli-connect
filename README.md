@@ -1,26 +1,52 @@
-# Ferroli Connect for Home Assistant
+<p align="center">
+  <img src="custom_components/ferroli_connect/brand/logo.png" alt="Ferroli Connect" width="300">
+</p>
 
-A custom Home Assistant integration for Ferroli boilers that are managed through the Ferroli Connect cloud account. It exposes read-only boiler telemetry and gated room thermostat temperature-target control.
+<p align="center">Connect Home Assistant to your Ferroli Connect cloud account for live telemetry and carefully gated room-thermostat temperature control.</p>
 
-This is an unofficial community integration. It is not an official Ferroli product.
+<p align="center">
+  <img src="https://img.shields.io/github/v/release/netcraker01/ha-ferroli-connect?label=release" alt="GitHub release">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT License">
+  <a href="https://github.com/netcraker01/ha-ferroli-connect/actions/workflows/hacs.yml"><img src="https://github.com/netcraker01/ha-ferroli-connect/actions/workflows/hacs.yml/badge.svg" alt="HACS validation"></a>
+  <a href="https://github.com/netcraker01/ha-ferroli-connect/actions/workflows/hassfest.yml"><img src="https://github.com/netcraker01/ha-ferroli-connect/actions/workflows/hassfest.yml/badge.svg" alt="Hassfest validation"></a>
+  <img src="https://img.shields.io/badge/Home%20Assistant-2026.10-blue" alt="Tested with Home Assistant 2026.10">
+</p>
 
-> **Status: early release (0.1.3).** The protocol was reverse-engineered from the Android app, and live behaviour has been verified only for a limited set of operations (see [Verification status](#verification-status)). Operate the boiler cautiously and confirm behaviour on your own installation.
+This is an unofficial community integration; it is not an official Ferroli product. The protocol was reverse-engineered from the Ferroli Connect Android app, and only a limited set of operations has been exercised on real hardware. Use the integration cautiously and confirm behaviour on your installation.
 
-## Features
+## Why Ferroli Connect
 
-- Sign in with a Ferroli Connect account and select a device during setup.
-- Room thermostat climate entity, room temperature and targets, heating-active indicator, and boiler water temperature telemetry.
-- Re-authentication when the cloud session expires.
-- Real-time boiler telemetry over MQTT (TLS), and room thermostat values polled over HTTPS.
-- Room thermostat temperature-target writes are disabled until you explicitly enable control in the integration options.
+- ☁️ Connects directly to the Ferroli Connect cloud account—no DNS workarounds or local broker setup to manage.
+- 🧭 Guided configuration flow with account login and a device picker.
+- 🌡️ Room thermostat target control is opt-in, read back after commands, and verified on real hardware.
+- 📡 Live MQTT boiler telemetry plus thermostat temperatures and target values polled over HTTPS.
+- 🌍 Home Assistant UI strings are available in English and Spanish.
+- 👐 MIT-licensed, unofficial community project.
+
+## Features and entities
+
+The integration provides `climate`, `binary_sensor`, and `sensor` platforms. Entity names below are their Home Assistant names; entity IDs depend on your naming settings.
+
+| Entity | Platform | Behaviour |
+| --- | --- | --- |
+| Room thermostat | Climate | Reports room temperature, target and available thermostat state. Mode reporting is read-only. Its temperature target is the single writable control, gated by the control-safety option. In automatic mode, target reporting is limited to an active saved override; scheduled bands are not decoded. |
+| Heating active | Binary sensor | Read-only boiler heating-active status from MQTT telemetry. |
+| Heating water temperature | Sensor | Read-only current heating-water temperature from MQTT telemetry. |
+| Heating water target | Sensor | Read-only heating-water target telemetry; no write control is provided. |
+| Domestic hot water temperature | Sensor | Read-only current DHW temperature from MQTT telemetry. |
+| Domestic hot water target | Sensor | Read-only DHW target telemetry; no write control is provided. |
+| Room temperature | Sensor | Read-only thermostat room temperature. |
+| Room target | Sensor | Read-only effective room target; may be empty if no target applies. |
+| Room base target | Sensor | Read-only thermostat base target point. |
+| Room saved override target | Sensor | Read-only saved override target; it is not necessarily the active target. |
+
+Room thermostat values are polled over HTTPS. Boiler telemetry is received over MQTT using TLS. The integration does not expose battery entities in the current implementation.
 
 ## Requirements
 
-- Home Assistant with support for config flows and custom integrations.
-- A Ferroli Connect account with at least one device registered in the app.
+- Home Assistant with support for config flows and custom integrations. The integration has been run against Home Assistant Core 2026.10.x; it does not declare a minimum version.
+- A Ferroli Connect cloud account with at least one device registered in the app.
 - Network access from Home Assistant to the Ferroli cloud (HTTPS and MQTT over TLS).
-
-The integration does not declare a minimum Home Assistant version yet. It has been run against Home Assistant Core 2026.10.x during development.
 
 ## Installation
 
@@ -41,152 +67,88 @@ Use this fallback if the default listing is not available.
 3. Add the repository URL `https://github.com/netcraker01/ha-ferroli-connect` and choose category **Integration**.
 4. Find **Ferroli Connect** in HACS, select **Download**, and restart Home Assistant.
 
-## Setup
+## Configuration
 
 1. Go to **Settings → Devices & services → Add integration** and search for **Ferroli Connect**.
 2. Enter your Ferroli Connect username and password.
-3. Select the boiler device from the list.
+3. Select the device from the list.
 
-The password is used only for login and re-authentication and is not stored. The config entry keeps the username, the access token, the user slug, and the selected device metadata.
+The password is used for login and re-authentication and is not stored. Home Assistant's config entry stores the username, access token, user slug, and selected device metadata. Protect Home Assistant configuration files and backups because they contain the access token.
 
 ### Re-authentication
 
-If the session expires or the cloud rejects the token, Home Assistant shows a re-authentication prompt for the integration. Enter the username and password again. The integration then stores the new token and reloads.
+If the cloud session expires or rejects the token, Home Assistant prompts you to re-authenticate. Enter the username and password again; the integration stores the renewed token and reloads.
 
-### Enabling control
+### Control safety option
 
-Control is off by default. To allow the room thermostat temperature-target write:
+Control is disabled by default. In the integration, select **Configure**, enable **I understand and enable thermostat temperature control**, and submit. This option allows only the room thermostat temperature target to be changed; this write has been confirmed on real hardware. The integration reloads after the option changes. Turning it off makes the integration refuse the write.
 
-1. Open the **Ferroli Connect** integration and select **Configure**.
-2. Enable **I understand and enable boiler control** and submit.
+## Safety & trust
 
-The integration reloads. The room thermostat then accepts temperature-target writes. Disabling the option again makes the integration refuse this write.
+- Telemetry is read-only by default; control requires an explicit opt-in.
+- The only control write shipped is the room thermostat temperature target. Boiler water targets, thermostat mode switching, and master-relay control are not writable features.
+- A command requires fresh, known thermostat state and a valid saved manual target. After publishing, the integration reads values back over HTTPS (up to three attempts); it updates state only if the result matches, with no optimistic update.
+- The implementation validates the thermostat mode and target before sending. Unknown state or an unconfirmed readback blocks/reports failure rather than claiming success.
 
-## Devices and entities
+The target range is 5.0–35.0 °C in 0.1 °C steps. Writes require a known Off or manual mode and saved manual target. Only one case has been live-verified: a target change from 21.0 °C to 21.5 °C in Off mode, confirmed by an independent REST read while mode remained Off. Other implemented-mode writes have not been live-verified.
 
-Entity names are shown as Home Assistant displays them. Exact entity IDs depend on your naming.
+## Cloud and local-broker approaches
 
-### Calefacción (central heating)
+This comparison describes this integration and a typical local-MQTT Ferroli approach (for example, [josesblas/ferroli-connect](https://github.com/josesblas/ferroli-connect)); details can vary by project and setup.
 
-| Entity | Type | Notes |
+| Topic | Ferroli Connect (this) | Local-broker approach |
 | --- | --- | --- |
-| Room thermostat | Climate | Reports thermostat state and target; temperature target is the only writable control. |
-| Heating active | Binary sensor (running) | Boiler warming-up status flag. |
-| Heating water temperature | Sensor (°C) | Current heating-water temperature from MQTT telemetry. |
-| Room temperature | Sensor (°C) | Current room temperature from the thermostat. |
-| Room target | Sensor (°C) | Effective room target. Empty when no target applies (see below). |
-| Room base target | Sensor (°C) | Thermostat base target point. |
-| Room saved override target | Sensor (°C) | Saved override target, which is not necessarily active. |
-
-### Agua caliente sanitaria (ACS, domestic hot water)
-
-| Entity | Type | Notes |
-| --- | --- | --- |
-| Domestic hot water temperature | Sensor (°C) | Current hot-water temperature from MQTT telemetry. |
-
-
-## Room thermostat
-
-The climate entity reports the room thermostat's mode from telemetry; these are read-only states and the integration does not switch modes:
-
-- **Off** (`HVACMode.OFF`) is reported for thermostat mode 4.
-- **Heat** (`HVACMode.HEAT`) is reported for thermostat manual mode 1.
-- Automatic (schedule) mode is shown without an HVAC mode, and its target is only the active saved override, if one is active. Scheduled program bands are not decoded.
-
-Commands are gated:
-
-- Temperature-target writes require control enabled, a known Off or manual mode, and a saved manual target. The implemented range is 5.0 to 35.0 °C in 0.1 °C steps; live verification is limited to one maintained case: a target write confirmed while in Off. Writes in other modes are implemented but have not been live-verified. The mode itself is read-only.
-
-After each thermostat command, the integration reads the thermostat values back over HTTPS (up to three attempts). The entity state changes only if the readback matches the command. There is no optimistic update.
-
-## Safety model
-
-- **Control is opt-in.** The thermostat target write checks the integration option first.
-- **Only verified control is exposed.** The room thermostat temperature target is the only writable control.
-- **No optimistic state.** Writes change the displayed state only after the device or cloud confirms the value.
-- **Values are validated before sending**: thermostat target writes require a known supported mode and saved target.
-- **Unknown state blocks writes.** If the room mode or manual target is unknown, a temperature write is refused.
-- **Failures are explicit.** A command that is published but not confirmed raises an error instead of being reported as successful.
+| Setup effort | Guided cloud login and device selection in Home Assistant. | Typically requires a reachable local MQTT broker and integration-specific broker/device configuration. |
+| Cloud dependency | Requires Ferroli Connect cloud HTTPS and MQTT over TLS. | Typically communicates through a local broker; cloud dependence varies by implementation and device provisioning. |
+| Privacy model | Account authentication and telemetry/control traffic use Ferroli's cloud services; Home Assistant stores an access token. | Can keep device communication local, depending on the implementation and any cloud-dependent provisioning. |
+| Verified control writes | Only room thermostat temperature target is writable; one real-hardware case has been confirmed. | Control capabilities and verification depend on the specific project and hardware; check its documentation. |
+| Translations | English and Spanish UI strings. | Translation availability depends on the specific project. |
 
 ## Protocol evidence and limitations
 
-The API and packet contract were derived by static inspection of the Ferroli Connect Android app, version 1.5.2 (`com.szacs.ferroliconnect`), and its decompiled source. The app's code was not executed, and the decompiled export is not part of this repository.
+The API and packet contract were derived by static inspection of Ferroli Connect Android app version 1.5.2 (`com.szacs.ferroliconnect`) and its decompiled source. The app was not executed, and the decompiled export is not part of this repository.
 
-**Cloud API (HTTPS, base `https://eu-api.topband-cloud.com/`)**
+**Cloud API:** The integration uses `https://eu-api.topband-cloud.com/` for form login (`POST api/token`), current-user and device lookup, MQTT credentials/configuration, token refresh, and room thermostat points.
 
-- `POST api/token` for form login, `GET api/current_user`, and `GET api/users/{user_slug}/devices` for device listing.
-- `GET api/mqtt/token` and `GET api/mqtt/app` for MQTT credentials and broker configuration.
-- `POST api/token/refashion` to refresh an expired token.
-- `GET apps/topiot_ferroli_temperature_controller/thermostat_points/{device}/{sdid}` to read room thermostat points.
+**MQTT:** Broker configuration and topic templates come from the cloud. The integration connects over TLS, subscribes to status/message topics at QoS 2, publishes commands at QoS 1, reconnects with exponential backoff up to 60 seconds, and refreshes the MQTT password on reconnect. Incomplete device metadata or unresolved topic templates fail setup instead of being guessed.
 
-**MQTT**
+**Limitations:** The weekly 7×48 Ferroli program and room schedule bands are not implemented; in automatic mode the room target is shown only when an override is active. DHW and summer modes are not modelled as heating. Boiler relay on/off is not controllable. Behaviour through cloud outages, token expiry, and re-authentication has not been live-verified. Offline tests cover codec vectors, malformed packets, thermostat point parsing, control encoding/gating/readback, entity contracts, and the legacy device cleanup guard; tests do not contact the cloud or MQTT.
 
-- Broker host, port, and topic templates come from the cloud configuration at setup. Topics are rendered only from the returned templates; unresolved placeholders fail setup.
-- Connects over TLS. Subscribes to status and message topics at QoS 2 and publishes commands at QoS 1.
-- Reconnects with exponential backoff (up to 60 seconds). Refreshes the MQTT password on reconnect.
+## FAQ
 
-**Packet format**
+### Where do my credentials go, and what is stored?
 
-- Frame and TLV layout follow the app's SDK classes. Offline tests use fixed wire vectors.
-- Decoded telemetry includes current heating-water and hot-water temperatures and heating-active status. The master-relay state is decoded as read-only telemetry and is not exposed as an entity or control.
+The password is used to authenticate and re-authenticate but is not stored. The username, access token, user slug, and selected device metadata are stored in Home Assistant's config entry. Protect your Home Assistant files and backups.
 
-**Limitations**
+### Why are there no DHW setpoint controls?
 
-- The Ferroli weekly program (7×48 packed schedule) is **not implemented**. The encoding is not fully verified.
-- Room schedule bands are not derived. In automatic mode, the room target is only shown when an override is active.
-- DHW and summer mode are not modelled as heating.
-- Boiler relay (on/off of the whole boiler) is not controllable. Do not treat the Heat/Off room thermostat modes as boiler on/off control.
-- Only the operations listed under [Verification status](#verification-status) have been exercised on a real installation.
+Boiler water targets, including DHW, have not been confirmed as safe writes on real hardware, so they are telemetry-only. The room thermostat temperature target is currently the only control write shipped.
 
-## Verification status
+### Which Home Assistant version has been tested?
 
-What the project's records and tests support:
+Home Assistant Core 2026.10.x. No minimum version is declared yet.
 
-- **Offline tests** cover codec vectors, malformed-packet handling, thermostat point parsing, room control encoding, gating and readback logic, entity contracts, and the legacy device cleanup guard.
-- **Live, reported by the maintainer:** one room thermostat temperature-target write was confirmed in Off mode: the saved manual target changed from 21.0 °C to 21.5 °C, and an independent REST read confirmed it while the mode stayed Off. This is the only live-verified write.
+### Will it work with my boiler?
 
-## Not yet verified / removed in 0.1.3
+It is intended for devices registered to supported Ferroli Connect cloud accounts/receivers and visible through the account's device list. Compatibility depends on the account, receiver, and device data returned by the cloud; not every model has been verified. The integration requires cloud access from Home Assistant.
 
-The following features are absent because their commands were never confirmed on real hardware. Do not treat them as controls:
+### How do I report an issue?
 
-- Writing heating-water or hot-water (DHW) targets.
-- Switching the thermostat between **Heat** and **Off**, or toggling the boiler master relay.
-- Heating-active and water telemetry changes over a full heating cycle.
-- Behaviour during cloud outages, token expiry, and re-authentication.
-
-Test on your installation before relying on any of these operations.
-
-## Tests
-
-The tests run without Home Assistant or a network connection.
-
-```bash
-python3 -m compileall -q custom_components tests
-python3 tests/test_ferroli_codec.py
-```
-
-`tests/test_ferroli_connect.py` contains contract tests written as pytest-style functions. They inspect the manifest, the API and config flow sources, and the entity definitions, and they include stubbed behaviour checks. Run them with pytest where it is available:
-
-```bash
-python3 -m pytest tests/test_ferroli_connect.py
-```
-
-The test files do not contact the cloud or MQTT.
+Open a GitHub issue with your Home Assistant and integration versions, relevant debug logs with secrets removed, and the boiler model if known. Never share passwords, access tokens, or MQTT credentials.
 
 ## Troubleshooting
 
-- **"Invalid username or password"**: check the credentials in the Ferroli Connect app, then re-authenticate.
-- **"No devices found"**: the account has no devices visible through the cloud API.
-- **"Unable to sign in or retrieve devices"**: check network access to `eu-api.topband-cloud.com`.
-- **Entities unavailable**: the MQTT connection or the thermostat poll is failing. Enable debug logs (below) and look for `Ferroli MQTT connection failed` or `Ferroli thermostat poll failed`.
-- **"Enable thermostat control in integration options first"** or similar: control is disabled. Enable it under **Configure**.
-- **"Temperature changes require known OFF or manual mode"** or **"A valid saved manual target is required"**: the room thermostat is in automatic mode or has no saved manual target. Set manual mode on the thermostat itself first.
-- **"Thermostat command was published but readback did not confirm it"**: the command may or may not have applied. Check the room thermostat values on the device before retrying.
-- Room thermostat temperature is the only supported control, and its target write has been live-verified. If a change is not confirmed, check the thermostat target and telemetry on the device.
-- **"Selected device lacks product_code/device_code"** or **"MQTT config is missing required dynamic topic templates"**: the cloud returned incomplete device or MQTT data. The integration does not guess topics; setup fails until the data is complete.
-- **Legacy "Termostato" device**: an older version created a separate device. After a successful setup the integration removes it, but only when it is unique, owned by this entry, and has no linked entities. Otherwise it is left in place.
+- **`invalid_auth` / “Invalid username or password”**: check the credentials in the Ferroli Connect app, then retry setup or re-authenticate.
+- **`no_devices` / “No devices found”**: the account has no devices visible through the cloud API.
+- **`cannot_connect` / “Unable to sign in or retrieve devices”**: sign-in or device retrieval failed; check Home Assistant network access to `eu-api.topband-cloud.com`.
+- **Entities unavailable**: the MQTT connection or thermostat poll may be failing. Enable debug logs and look for `Ferroli MQTT connection failed` or `Ferroli thermostat poll failed`.
+- **“Enable thermostat control in integration options first”**: enable the control-safety option under **Configure**.
+- **“Temperature changes require known OFF or manual mode”** or **“A valid saved manual target is required”**: the thermostat mode or saved manual target is not suitable/known. Set manual mode on the thermostat itself first.
+- **“Thermostat command was published but readback did not confirm it”**: the command may or may not have applied. Check the thermostat values on the device before retrying.
+- **“Selected device lacks product_code/device_code”** or missing MQTT topic templates: the cloud returned incomplete device/MQTT data. Setup stops rather than guessing topics.
+- **Legacy “Termostato” device**: an older version may have created a separate device. After successful setup, the integration removes it only when it is unique, owned by this entry, and has no linked entities; otherwise it is left in place.
 
-To enable debug logs, add the following to `configuration.yaml` and restart or reload logging:
+To enable debug logging, add this to `configuration.yaml` and restart Home Assistant or reload logging:
 
 ```yaml
 logger:
@@ -194,19 +156,17 @@ logger:
     custom_components.ferroli_connect: debug
 ```
 
-Do not post passwords, access tokens, or MQTT credentials in issue reports. Remove them from logs before sharing.
+Remove secrets from logs before sharing them.
 
-## Security
+## Tests
 
-- The password is not stored. Only the access token is stored in the config entry.
-- The access token is kept in Home Assistant's configuration storage. Anyone with access to your Home Assistant files or backups can use it, so protect your backups.
-- Tokens are refreshed through the cloud's refresh endpoint when the server rejects them.
-- No credentials, tokens, or device identifiers are included in this repository.
-- The Ferroli Connect app package (APK) is retained only as a local analysis artifact, is not redistributed, and is excluded from version control.
+The tests run without Home Assistant or a network connection:
 
-## Contributing and issues
-
-Please report issues with the Home Assistant version, integration version, relevant debug logs with secrets removed, and the boiler model where known.
+```bash
+python3 -m compileall -q custom_components tests
+python3 tests/test_ferroli_codec.py
+python3 -m pytest tests/test_ferroli_connect.py
+```
 
 ## License
 
