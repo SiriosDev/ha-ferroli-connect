@@ -9,9 +9,7 @@ from .const import DOMAIN
 
 SENSORS = (
     ("current_temperature", "heating_water_temperature", "Heating water temperature"),
-    ("target_temperature", "heating_water_target", "Heating water target"),
     ("dhw_current_temperature", "domestic_hot_water_temperature", "Domestic hot water temperature"),
-    ("dhw_target_temperature", "domestic_hot_water_target", "Domestic hot water target"),
     ("room_temperature", "room_temperature", "Room temperature"),
     ("room_target_temperature", "room_target_temperature", "Room target"),
     ("room_base_target_temperature", "room_base_target_temperature", "Room base target"),

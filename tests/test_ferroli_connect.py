@@ -89,9 +89,12 @@ def test_water_sensor_platform_is_distinct_and_read_only():
     sensor = (ROOT / "sensor.py").read_text()
     assert "Heating water temperature" in sensor
     assert "Domestic hot water temperature" in sensor
-    assert "Heating water target" in sensor
-    assert "Domestic hot water target" in sensor
+    assert "Heating water target" not in sensor  # targets moved to number.py (v0.1.6+)
+    assert "Domestic hot water target" not in sensor
     assert ".publish(" not in sensor
+    number = (ROOT / "number.py").read_text()
+    assert "Heating water target" in number
+    assert "Domestic hot water target" in number
     climate = (ROOT / "climate.py").read_text()
     assert '_attr_name = "Room thermostat"' in climate
     assert 'if not self.entry.options.get("confirm_control", False)' in climate
