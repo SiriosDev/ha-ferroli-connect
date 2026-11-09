@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import voluptuous as vol
+from collections.abc import Mapping
 from aiohttp import ClientError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import ConfigFlowResult
+from typing import Any
 
 from .api import FerroliApi
 from .const import CONF_DEVICE, DOMAIN
@@ -14,19 +17,22 @@ from .const import CONF_DEVICE, DOMAIN
 class FerroliConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
-    async def async_step_reauth(self, user_input=None):
-        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
+        self._reauth_username = entry_data.get("username", "")
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input=None):
         errors = {}
         if user_input:
             api = FerroliApi(async_get_clientsession(self.hass))
             try:
                 await api.login(user_input["username"], user_input["password"])
-                return self.async_update_reload_and_abort(entry, data_updates={
+                return self.async_update_reload_and_abort(self._get_reauth_entry(), data_updates={
                     "username": user_input["username"], "token": api.token})
             except Exception:
                 errors["base"] = "invalid_auth"
-        return self.async_show_form(step_id="reauth", data_schema=vol.Schema({
-            vol.Required("username", default=entry.data.get("username", "")): str,
+        return self.async_show_form(step_id="reauth_confirm", data_schema=vol.Schema({
+            vol.Required("username", default=self._reauth_username): str,
             vol.Required("password"): str}), errors=errors)
 
     async def async_step_user(self, user_input=None):
@@ -54,6 +60,8 @@ class FerroliConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                    for item in devices if item.get("slug")}
         if user_input:
             device = next(row for row in devices if str(row.get("slug")) == user_input[CONF_DEVICE])
+            await self.async_set_unique_id(str(device.get("slug")))
+            self._abort_if_unique_id_configured()
             return self.async_create_entry(title=device.get("name", "Ferroli Connect"),
                                            data={"username": self._api_data["username"],
                                                  "token": self._api_data["token"],

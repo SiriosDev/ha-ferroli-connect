@@ -1,8 +1,11 @@
 """Ferroli Connect integration."""
 import logging
 
+import aiohttp
+
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
@@ -66,6 +69,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except PermissionError as err:
         await runtime.close()
         raise ConfigEntryAuthFailed("Ferroli authentication expired") from err
+    except (aiohttp.ClientError, TimeoutError, OSError) as err:
+        await runtime.close()
+        raise ConfigEntryNotReady("Unable to connect to Ferroli services") from err
     except Exception:
         await runtime.close()
         raise

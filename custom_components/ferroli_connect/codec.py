@@ -13,16 +13,15 @@ PACKET_QUERY = 1
 BOILER_ID_FLAG = 8228  # Message.BOILER_ID
 BOILER_ID = 1431677610  # BoilerID default (0x5555554a)
 RELAY_FLAG = 8209
-HEATING_TARGET_FLAG = 8203
 HEATING_ACTIVE_FLAG = 8224  # Message.FLAG_WARMING_UP_STATUS (0x2020)
+HEATING_TARGET_FLAG = 8203  # Read-only telemetry flag (0x200B)
 HEATING_CURRENT_FLAG = 0x2000
 HEATING_DHW_CURRENT_FLAG = 0x2002
-HEATING_DHW_TARGET_FLAG = 0x2003
+HEATING_DHW_TARGET_FLAG = 0x2003  # Read-only telemetry flag
 ACS_MIN_FLAG = 0x200A
 ACS_MAX_FLAG = 0x2009
 THERMOSTAT_ID_FLAG = 0x0017  # ThermostatID2.java: super((short) 23), decimal.
 THERMOSTAT_MANUAL_TEMP_FLAG = 0x1010
-THERMOSTAT_MODE_FLAG = 0x100F
 
 
 def parse_thermostat_points(payload) -> dict[str, float | bool]:
@@ -98,14 +97,6 @@ def thermostat_temperature_command(sdid: str, temperature: float, **header) -> b
     # APK ThermostatActivity chains the point before thermostat(therid); the SDK
     # appends TLVs in call order (MessagePacket.java:84-85,154-156).
     return control_packet([(THERMOSTAT_MANUAL_TEMP_FLAG, deci.to_bytes(2, "big")),
-                           (THERMOSTAT_ID_FLAG, thermostat_id(sdid))], **header)
-
-
-def thermostat_mode_command(sdid: str, mode: int, **header) -> bytes:
-    if mode not in (1, 4):
-        raise ValueError("Only explicit manual (1) and off (4) modes are supported")
-    # ThermostatActivity.java:1173-1195 sends mode(i) before thermostat(therid).
-    return control_packet([(THERMOSTAT_MODE_FLAG, bytes((mode,))),
                            (THERMOSTAT_ID_FLAG, thermostat_id(sdid))], **header)
 
 
@@ -204,26 +195,6 @@ def relay_command(open_relay: bool, **header) -> bytes:
     status = 2 if open_relay else 1
     return control_packet([(BOILER_ID_FLAG, BOILER_ID.to_bytes(4, "big")),
                            (RELAY_FLAG, bytes((status,)))], **header)
-
-
-def _boiler_target_command(flag: int, temp_c: float, **header) -> bytes:
-    if isinstance(temp_c, bool) or not isinstance(temp_c, (int, float)):
-        raise ValueError("temperature must be a finite whole number of Celsius")
-    value = float(temp_c)
-    if not math.isfinite(value) or not value.is_integer() or not 0 <= value <= 6553.5:
-        raise ValueError("temperature must be a finite whole number of Celsius")
-    deci_c = int(value * 10)
-    # APK call order is target(...).boiler().control(): target TLV first.
-    return control_packet([(flag, deci_c.to_bytes(2, "big")),
-                           (BOILER_ID_FLAG, BOILER_ID.to_bytes(4, "big"))], **header)
-
-
-def target_command(temp_c: float, **header) -> bytes:
-    return _boiler_target_command(HEATING_TARGET_FLAG, temp_c, **header)
-
-
-def dhw_target_command(temp_c: float, **header) -> bytes:
-    return _boiler_target_command(HEATING_DHW_TARGET_FLAG, temp_c, **header)
 
 
 def relay_is_open(payload: bytes) -> bool | None:

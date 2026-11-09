@@ -15,7 +15,6 @@ from .codec import decode_boiler_telemetry, parse_thermostat_points, query_packe
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-_BOILER_READBACK_TIMEOUT = 8
 
 
 def _render(template: str, product: str, device: str, client_id: str) -> str:
@@ -39,10 +38,6 @@ class FerroliRuntime:
         self._thermostat_task: asyncio.Task | None = None
         self._api = FerroliApi(async_get_clientsession(hass), entry.data["token"])
         self._thermostat_control_lock = asyncio.Lock()
-        self._telemetry_condition = asyncio.Condition()
-        self._telemetry_generation = 0
-        self._last_boiler_update: dict = {}
-        self._boiler_control_lock = asyncio.Lock()
 
     async def start(self) -> None:
         await self._api.current_user()
@@ -176,37 +171,7 @@ class FerroliRuntime:
         """Update telemetry and notify only for a decoded type-3 response."""
         update = decode_boiler_telemetry(payload)
         self.state.update(update)
-        async with self._telemetry_condition:
-            self._telemetry_generation += 1
-            self._last_boiler_update = dict(update)
-            self._telemetry_condition.notify_all()
         return update
-
-    async def control_boiler_target(self, payload: bytes, *, state_key: str,
-                                    expected_temperature: int) -> None:
-        """Issue one target write and require a fresh MQTT response after QUERY."""
-        if not self.entry.options.get("confirm_control", False):
-            raise RuntimeError("Ferroli control is not confirmed in integration options")
-        async with self._boiler_control_lock:
-            if self._client is None:
-                raise RuntimeError("Ferroli MQTT is not connected")
-            await self.publish(payload)
-            async with self._telemetry_condition:
-                generation = self._telemetry_generation
-            query_id = self.next_message_id()
-            await self.publish(query_packet(msg_id=query_id))
-
-            def confirmed() -> bool:
-                return (self._telemetry_generation > generation and
-                        self._last_boiler_update.get(state_key) == expected_temperature)
-
-            try:
-                async with self._telemetry_condition:
-                    await asyncio.wait_for(
-                        self._telemetry_condition.wait_for(confirmed),
-                        timeout=_BOILER_READBACK_TIMEOUT)
-            except TimeoutError:
-                raise RuntimeError("Boiler target write was not confirmed by fresh MQTT readback") from None
 
     async def control_thermostat(self, payload: bytes, *, expected_mode: int,
                                  expected_temperature: float | None = None) -> None:

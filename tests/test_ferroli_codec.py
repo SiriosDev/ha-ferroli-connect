@@ -3,11 +3,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "custom_components" / "ferroli_connect"))
-from codec import (HEATING_TARGET_FLAG, parse_packet, query_packet, relay_command,
-                   relay_is_open, target_command, target_temperature,
+from codec import (parse_packet, query_packet, relay_command,
+                   relay_is_open, target_temperature,
                    decode_boiler_telemetry, parse_thermostat_points,
-                   thermostat_mode_command, thermostat_temperature_command,
-                   dhw_target_command)
+                   thermostat_temperature_command)
 
 
 def test_relay_vectors():
@@ -17,16 +16,6 @@ def test_relay_vectors():
         "202400045555aaaa2011000102")
     assert relay_command(False, timestamp_ms=0, timezone_offset_hours=12) == prefix + bytes.fromhex(
         "202400045555aaaa2011000101")
-
-
-def test_heating_target_vector_and_decode():
-    packet = target_command(55, timestamp_ms=0, timezone_offset_hours=12)
-    assert packet[-14:] == bytes.fromhex("200b00020226 202400045555aaaa")
-    kind, fields = parse_packet(packet)
-    assert kind == 2 and target_temperature(fields[HEATING_TARGET_FLAG]) == 55
-    assert relay_is_open(bytes((2,))) is True
-    assert relay_is_open(bytes((16,))) is False
-    assert relay_is_open(bytes((0,))) is None
 
 
 def test_query_packet_vector():
@@ -78,12 +67,6 @@ def test_malformed_tlvs_and_ranges():
             pass
         else:
             raise AssertionError("malformed packet accepted")
-    try:
-        target_command(7000, timestamp_ms=0)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("out-of-range temperature accepted")
 
 
 def test_info_length_controls_tlv_offset():
@@ -152,27 +135,6 @@ def test_heating_and_dhw_water_temperatures_preserve_tenths():
             raise AssertionError("invalid-length water TLV accepted")
 
 
-def test_boiler_target_vectors_whole_degrees_and_live_bounds():
-    prefix = bytes.fromhex("0002130101") + bytes(16) + bytes.fromhex("0c")
-    assert target_command(55, timestamp_ms=0) == prefix + bytes.fromhex(
-        "200b00020226 202400045555aaaa")
-    assert dhw_target_command(50, timestamp_ms=0) == prefix + bytes.fromhex(
-        "2003000201f4 202400045555aaaa")
-    response = bytes.fromhex("0003130101") + bytes(16) + bytes.fromhex(
-        "0c200a000114200900013c200800011e2007000155")
-    state = decode_boiler_telemetry(response)
-    assert state["dhw_min_temperature"] == 20
-    assert state["dhw_max_temperature"] == 60
-    assert state["min_temperature"] == 30 and state["max_temperature"] == 85
-    for value in (20.5, float("nan"), float("inf"), -1, True, "50"):
-        try:
-            dhw_target_command(value, timestamp_ms=0)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("invalid boiler target accepted")
-
-
 def test_thermostat_point_hex_vectors_and_invalid_values():
     assert parse_thermostat_points({"1000": "010a", "1001": "00d7"}) == {
         "room_temperature": 26.6, "room_base_target_temperature": 21.5}
@@ -205,15 +167,6 @@ def test_room_thermostat_control_vectors_and_validation():
     prefix = bytes.fromhex("0002130101") + bytes(16) + bytes.fromhex("0c")
     assert thermostat_temperature_command("1234abcd", 21.5, timestamp_ms=0) == prefix + bytes.fromhex(
         "1010000200d7001700041234abcd")  # SDK ThermostatID2 flag is decimal 23.
-    assert thermostat_mode_command("1234abcd", 4, timestamp_ms=0) == prefix + bytes.fromhex(
-        "100f000104001700041234abcd")
-    for bad_id in ("123", "1234567g", "123456789"):
-        try:
-            thermostat_mode_command(bad_id, 1, timestamp_ms=0)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("invalid thermostat child ID accepted")
     for value in (4.9, 35.1, float("nan"), float("inf"), 21.55):
         try:
             thermostat_temperature_command("1234abcd", value, timestamp_ms=0)
@@ -221,18 +174,10 @@ def test_room_thermostat_control_vectors_and_validation():
             pass
         else:
             raise AssertionError("invalid thermostat target accepted")
-    for value in (0, 2):
-        try:
-            thermostat_mode_command("1234abcd", value, timestamp_ms=0)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("unsupported thermostat mode accepted")
 
 
 if __name__ == "__main__":
     test_relay_vectors()
-    test_heating_target_vector_and_decode()
     test_query_packet_vector()
     test_malformed_tlvs_and_ranges()
     test_info_length_controls_tlv_offset()

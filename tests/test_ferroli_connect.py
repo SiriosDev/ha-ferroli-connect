@@ -40,12 +40,14 @@ def test_setup_failure_closes_runtime_and_delegates_reauth_to_home_assistant():
     function = next(node for node in setup.body
                     if isinstance(node, ast.AsyncFunctionDef) and node.name == "async_setup_entry")
     auth_failed = type("ConfigEntryAuthFailed", (Exception,), {})
+    not_ready = type("ConfigEntryNotReady", (Exception,), {})
 
     async def check(error, expected_type):
         runtime = types.SimpleNamespace(start=AsyncMock(side_effect=error), close=AsyncMock())
         namespace = {
             "HomeAssistant": object, "ConfigEntry": object,
             "FerroliRuntime": lambda *args: runtime, "ConfigEntryAuthFailed": auth_failed,
+            "ConfigEntryNotReady": not_ready, "aiohttp": types.SimpleNamespace(ClientError=type("ClientError", (Exception,), {})),
         }
         exec(compile(ast.Module(body=[function], type_ignores=[]), str(ROOT / "__init__.py"),
                      "exec"), namespace)
@@ -53,7 +55,7 @@ def test_setup_failure_closes_runtime_and_delegates_reauth_to_home_assistant():
         try:
             await namespace["async_setup_entry"](object(), object())
         except expected_type as err:
-            if isinstance(error, PermissionError):
+            if isinstance(error, (PermissionError, OSError, TimeoutError)):
                 assert err.__cause__ is error
             else:
                 assert err is error
@@ -62,6 +64,8 @@ def test_setup_failure_closes_runtime_and_delegates_reauth_to_home_assistant():
         runtime.close.assert_awaited_once_with()
 
     asyncio.run(check(PermissionError("expired"), auth_failed))
+    asyncio.run(check(OSError("offline"), not_ready))
+    asyncio.run(check(TimeoutError("timeout"), not_ready))
     asyncio.run(check(RuntimeError("setup failed"), RuntimeError))
 
 
@@ -75,6 +79,9 @@ def test_climate_does_not_claim_unverified_control_or_state():
     assert "if mode in (1, 4)" in climate and 'elif mode == 0' in climate
     assert "ClimateEntityFeature.TARGET_TEMPERATURE" in climate
     assert "else ClimateEntityFeature(0)" in climate
+    assert "thermostat_mode_command" not in climate
+    assert "NotImplementedError" in climate
+    assert "thermostat_temperature_command" in climate
 
 
 def test_water_sensor_platform_is_distinct_and_read_only():
@@ -90,19 +97,32 @@ def test_water_sensor_platform_is_distinct_and_read_only():
     assert 'if not self.entry.options.get("confirm_control", False)' in climate
 
 
-def test_boiler_number_controls_are_gated_and_fresh_readback_confirmed():
-    number = (ROOT / "number.py").read_text()
-    runtime = (ROOT / "runtime.py").read_text()
+def test_unverified_boiler_setpoint_writes_are_removed():
     const = (ROOT / "const.py").read_text()
-    assert '"number"' in const
-    assert 'if not entry.options.get("confirm_control", False)' in number
-    assert 'if not self.entry.options.get("confirm_control", False)' in number
-    assert '"dhw_min_temperature"' in number and '"dhw_max_temperature"' in number
-    assert '"min_temperature"' in number and '"max_temperature"' in number
-    assert 'self._last_boiler_update.get(state_key) == expected_temperature' in runtime
-    assert '_BOILER_READBACK_TIMEOUT = 8' in runtime
-    assert 'await self.publish(query_packet' in runtime
-    assert 'async_add_entities' in number
+    assert not (ROOT / "number.py").exists()
+    assert '"number"' not in const
+
+
+def test_config_flow_reauth_updates_entry_and_device_selection_is_unique():
+    flow = (ROOT / "config_flow.py").read_text()
+    assert "entry_data: Mapping[str, Any]" in flow
+    assert "async_step_reauth_confirm" in flow
+    assert "self._get_reauth_entry()" in flow
+    assert "async_update_reload_and_abort" in flow
+    assert "async_set_unique_id(str(device.get(\"slug\")))" in flow
+    assert "_abort_if_unique_id_configured()" in flow
+
+
+def test_translation_keys_match_and_only_confirmed_write_is_described():
+    translations = [json.loads((ROOT / path).read_text()) for path in
+                    ("strings.json", "translations/en.json", "translations/es.json")]
+    def keys(value):
+        if isinstance(value, dict):
+            return {key: keys(item) for key, item in value.items()}
+        return None
+    assert keys(translations[0]) == keys(translations[1]) == keys(translations[2])
+    for translation in translations:
+        assert "relay" not in translation["options"]["step"]["init"]["description"].lower()
 
 
 def test_room_thermostat_api_is_read_only_and_sensors_are_separate():
@@ -195,10 +215,12 @@ def test_legacy_thermostat_cleanup_behavior():
         config_entries.ConfigEntry = type("ConfigEntry", (), {})
         exceptions = types.ModuleType("homeassistant.exceptions")
         exceptions.ConfigEntryAuthFailed = type("ConfigEntryAuthFailed", (Exception,), {})
+        exceptions.ConfigEntryNotReady = type("ConfigEntryNotReady", (Exception,), {})
         core = types.ModuleType("homeassistant.core")
         core.HomeAssistant = type("HomeAssistant", (), {})
         ha = types.ModuleType("homeassistant")
         modules = {
+            "aiohttp": types.SimpleNamespace(ClientError=type("ClientError", (Exception,), {})),
             "homeassistant": ha,
             "homeassistant.helpers": hass_helpers,
             "homeassistant.helpers.dispatcher": dispatcher,
