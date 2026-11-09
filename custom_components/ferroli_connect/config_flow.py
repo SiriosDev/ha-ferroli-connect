@@ -6,8 +6,8 @@ from collections.abc import Mapping
 from aiohttp import ClientError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import ConfigFlowResult
 from typing import Any
 
 from .api import FerroliApi
