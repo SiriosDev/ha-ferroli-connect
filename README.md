@@ -24,20 +24,22 @@ The integration does not declare a minimum Home Assistant version yet. It has be
 
 ## Installation
 
-### Option 1: HACS custom repository
+### Option 1: HACS
+
+1. Open **HACS** in Home Assistant.
+2. Search for **Ferroli Connect**.
+3. Select **Download** and restart Home Assistant.
+
+The repository is included in the HACS default list.
+
+### Option 2: Custom repository (fallback)
+
+Use this fallback if the default listing is not available.
 
 1. In Home Assistant, open **HACS**.
 2. Open the menu (⋮) and select **Custom repositories**.
 3. Add the repository URL `https://github.com/netcraker01/ha-ferroli-connect` and choose category **Integration**.
 4. Find **Ferroli Connect** in HACS, select **Download**, and restart Home Assistant.
-
-### Option 2: Manual installation
-
-1. Download or clone this repository.
-2. Copy the folder `custom_components/ferroli_connect` into your Home Assistant configuration directory so that the result is `<config>/custom_components/ferroli_connect/`.
-3. Restart Home Assistant.
-
-Do not copy the whole repository into `custom_components`. Only the `ferroli_connect` folder belongs there.
 
 ## Setup
 
