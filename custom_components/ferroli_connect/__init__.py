@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN, PLATFORMS
+from .const import DOMAIN, NUMBER_PLATFORM, PLATFORMS
 from .runtime import FerroliRuntime
 
 _LOGGER = logging.getLogger(__name__)
@@ -80,7 +80,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = runtime
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
     try:
-        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        platforms = [*PLATFORMS]
+        if entry.options.get("confirm_boiler_setpoints", False):
+            platforms.append(NUMBER_PLATFORM)
+        await hass.config_entries.async_forward_entry_setups(entry, platforms)
     except Exception:
         hass.data[DOMAIN].pop(entry.entry_id, None)
         await runtime.close()
@@ -90,7 +93,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    platforms = [*PLATFORMS, NUMBER_PLATFORM]
+    unloaded = await hass.config_entries.async_unload_platforms(entry, platforms)
     if unloaded:
         runtime = hass.data[DOMAIN].pop(entry.entry_id, None)
         if runtime:

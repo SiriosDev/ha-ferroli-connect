@@ -97,10 +97,21 @@ def test_water_sensor_platform_is_distinct_and_read_only():
     assert 'if not self.entry.options.get("confirm_control", False)' in climate
 
 
-def test_unverified_boiler_setpoint_writes_are_removed():
+def test_verified_boiler_setpoint_writes_are_readback_gated():
     const = (ROOT / "const.py").read_text()
-    assert not (ROOT / "number.py").exists()
-    assert '"number"' not in const
+    number = (ROOT / "number.py").read_text()
+    codec = (ROOT / "codec.py").read_text()
+    runtime = (ROOT / "runtime.py").read_text()
+    assert '"number"' in const
+    assert "dhw_target_command" in codec and "target_command" in codec
+    assert 'entry.options.get("confirm_boiler_setpoints", False)' in number
+    assert number.count("FerroliWaterTargetNumber") >= 2
+    method = runtime[runtime.index("async def control_boiler_setpoint"):runtime.index("def next_message_id")]
+    assert "update.get(waiter[0]) == waiter[1]" in runtime
+    assert "event.wait()" in method
+    assert "Ferroli setpoint write was not confirmed by telemetry" in method
+    assert method.index("event.wait()") < method.index("return")
+    assert "self.state[" not in method
 
 
 def test_config_flow_reauth_updates_entry_and_device_selection_is_unique():
@@ -113,7 +124,7 @@ def test_config_flow_reauth_updates_entry_and_device_selection_is_unique():
     assert "_abort_if_unique_id_configured()" in flow
 
 
-def test_translation_keys_match_and_only_confirmed_write_is_described():
+def test_translation_keys_match_and_only_confirmed_writes_are_described():
     translations = [json.loads((ROOT / path).read_text()) for path in
                     ("strings.json", "translations/en.json", "translations/es.json")]
     def keys(value):
@@ -123,6 +134,12 @@ def test_translation_keys_match_and_only_confirmed_write_is_described():
     assert keys(translations[0]) == keys(translations[1]) == keys(translations[2])
     for translation in translations:
         assert "relay" not in translation["options"]["step"]["init"]["description"].lower()
+        description = translation["options"]["step"]["init"]["description"].lower()
+        assert ("thermostat" in description or "termostato" in description)
+        assert "heating" in description or "calefacción" in description
+        assert "domestic hot water" in description or "agua caliente sanitaria" in description
+        assert "2026-11-09" in description
+        assert "confirm_boiler_setpoints" in translation["options"]["step"]["init"]["data"]
 
 
 def test_room_thermostat_api_is_read_only_and_sensors_are_separate():
@@ -155,7 +172,7 @@ def test_legacy_thermostat_cleanup_is_guarded_and_runs_after_setup():
     assert "async_remove_device(device.id)" in setup
     assert "async_get_device(" not in setup
     assert "device_registry.devices.values()" in setup
-    assert setup.index("async_forward_entry_setups(entry, PLATFORMS)") < setup.index(
+    assert setup.index("async_forward_entry_setups(entry, platforms)") < setup.index(
         "_async_remove_legacy_thermostat(hass, entry)"
     )
     assert 'device_data.get("child_devices")' in setup

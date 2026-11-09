@@ -2,7 +2,7 @@
   <img src="custom_components/ferroli_connect/brand/logo.png" alt="Ferroli Connect" width="300">
 </p>
 
-<p align="center">Connect Home Assistant to your Ferroli Connect cloud account for live telemetry and carefully gated room-thermostat temperature control.</p>
+<p align="center">Connect Home Assistant to your Ferroli Connect cloud account for live telemetry and carefully gated thermostat and boiler water setpoint controls.</p>
 
 <p align="center">
   <img src="https://img.shields.io/github/v/release/netcraker01/ha-ferroli-connect?label=release" alt="GitHub release">
@@ -18,23 +18,23 @@ This is an unofficial community integration; it is not an official Ferroli produ
 
 - ☁️ Connects directly to the Ferroli Connect cloud account—no DNS workarounds or local broker setup to manage.
 - 🧭 Guided configuration flow with account login and a device picker.
-- 🌡️ Room thermostat target control is opt-in, read back after commands, and verified on real hardware.
+- 🌡️ Room thermostat and boiler water target controls are separately opt-in and confirmed by readback telemetry.
 - 📡 Live MQTT boiler telemetry plus thermostat temperatures and target values polled over HTTPS.
 - 🌍 Home Assistant UI strings are available in English and Spanish.
 - 👐 MIT-licensed, unofficial community project.
 
 ## Features and entities
 
-The integration provides `climate`, `binary_sensor`, and `sensor` platforms. Entity names below are their Home Assistant names; entity IDs depend on your naming settings.
+The integration provides `climate`, `binary_sensor`, and `sensor` platforms. The `number` platform is added only when boiler setpoint control is explicitly enabled. Entity names below are their Home Assistant names; entity IDs depend on your naming settings.
 
 | Entity | Platform | Behaviour |
 | --- | --- | --- |
 | Room thermostat | Climate | Reports room temperature, target and available thermostat state. Mode reporting is read-only. Its temperature target is the single writable control, gated by the control-safety option. In automatic mode, target reporting is limited to an active saved override; scheduled bands are not decoded. |
 | Heating active | Binary sensor | Read-only boiler heating-active status from MQTT telemetry. |
 | Heating water temperature | Sensor | Read-only current heating-water temperature from MQTT telemetry. |
-| Heating water target | Sensor | Read-only heating-water target telemetry; no write control is provided. |
+| Heating water target | Sensor / Number (opt-in) | Target telemetry; a gated Number control writes integer °C and requires matching MQTT telemetry readback. |
 | Domestic hot water temperature | Sensor | Read-only current DHW temperature from MQTT telemetry. |
-| Domestic hot water target | Sensor | Read-only DHW target telemetry; no write control is provided. |
+| Domestic hot water target | Sensor / Number (opt-in) | DHW target telemetry; a gated Number control writes integer °C and requires matching MQTT telemetry readback. |
 | Room temperature | Sensor | Read-only thermostat room temperature. |
 | Room target | Sensor | Read-only effective room target; may be empty if no target applies. |
 | Room base target | Sensor | Read-only thermostat base target point. |
@@ -81,16 +81,16 @@ If the cloud session expires or rejects the token, Home Assistant prompts you to
 
 ### Control safety option
 
-Control is disabled by default. In the integration, select **Configure**, enable **I understand and enable thermostat temperature control**, and submit. This option allows only the room thermostat temperature target to be changed; this write has been confirmed on real hardware. The integration reloads after the option changes. Turning it off makes the integration refuse the write.
+Controls are disabled by default. In **Configure**, enable thermostat control and, separately, **I understand and enable boiler water setpoint controls** to expose heating-water and DHW Number entities. All three controls require readback confirmation; disabling the boiler option removes the Number platform. The integration reloads after options change.
 
 ## Safety & trust
 
 - Telemetry is read-only by default; control requires an explicit opt-in.
-- The only control write shipped is the room thermostat temperature target. Boiler water targets, thermostat mode switching, and master-relay control are not writable features.
+- Verified writes are the room thermostat target, heating-water setpoint, and DHW setpoint; the boiler setpoints were live readback-tested on a real Ferroli boiler on 2026-11-09. Thermostat mode switching and master-relay control are not writable features.
 - A command requires fresh, known thermostat state and a valid saved manual target. After publishing, the integration reads values back over HTTPS (up to three attempts); it updates state only if the result matches, with no optimistic update.
 - The implementation validates the thermostat mode and target before sending. Unknown state or an unconfirmed readback blocks/reports failure rather than claiming success.
 
-The target range is 5.0–35.0 °C in 0.1 °C steps. Writes require a known Off or manual mode and saved manual target. Only one case has been live-verified: a target change from 21.0 °C to 21.5 °C in Off mode, confirmed by an independent REST read while mode remained Off. Other implemented-mode writes have not been live-verified.
+Room target range is 5.0–35.0 °C in 0.1 °C steps and requires known Off or manual mode and saved manual target. Boiler heating-water range is 25–85 °C; DHW is 30–65 °C, both in 1 °C steps. Each write updates state only after matching readback.
 
 ## Cloud and local-broker approaches
 
@@ -101,7 +101,7 @@ This comparison describes this integration and a typical local-MQTT Ferroli appr
 | Setup effort | Guided cloud login and device selection in Home Assistant. | Typically requires a reachable local MQTT broker and integration-specific broker/device configuration. |
 | Cloud dependency | Requires Ferroli Connect cloud HTTPS and MQTT over TLS. | Typically communicates through a local broker; cloud dependence varies by implementation and device provisioning. |
 | Privacy model | Account authentication and telemetry/control traffic use Ferroli's cloud services; Home Assistant stores an access token. | Can keep device communication local, depending on the implementation and any cloud-dependent provisioning. |
-| Verified control writes | Only room thermostat temperature target is writable; one real-hardware case has been confirmed. | Control capabilities and verification depend on the specific project and hardware; check its documentation. |
+| Verified control writes | Room thermostat, heating-water, and DHW targets; boiler writes were confirmed by live telemetry readback. | Control capabilities and verification depend on the specific project and hardware; check its documentation. |
 | Translations | English and Spanish UI strings. | Translation availability depends on the specific project. |
 
 ## Protocol evidence and limitations
@@ -120,9 +120,9 @@ The API and packet contract were derived by static inspection of Ferroli Connect
 
 The password is used to authenticate and re-authenticate but is not stored. The username, access token, user slug, and selected device metadata are stored in Home Assistant's config entry. Protect your Home Assistant files and backups.
 
-### Why are there no DHW setpoint controls?
+### How do I enable boiler water setpoint controls?
 
-Boiler water targets, including DHW, have not been confirmed as safe writes on real hardware, so they are telemetry-only. The room thermostat temperature target is currently the only control write shipped.
+Enable **I understand and enable boiler water setpoint controls** separately in integration options. Heating-water and DHW writes have been readback-tested on a real boiler; the controls remain disabled by default and require matching MQTT telemetry before success is reported.
 
 ### Which Home Assistant version has been tested?
 

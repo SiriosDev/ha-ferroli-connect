@@ -214,6 +214,26 @@ def target_temperature(payload: bytes) -> float | None:
     return int.from_bytes(payload, "big") / 10
 
 
+def _boiler_target_command(flag: int, temp_c: float, **header) -> bytes:
+    if isinstance(temp_c, bool) or not isinstance(temp_c, (int, float)):
+        raise ValueError("temperature must be a finite whole number of Celsius")
+    value = float(temp_c)
+    if not math.isfinite(value) or not value.is_integer() or not 0 <= value <= 6553.5:
+        raise ValueError("temperature must be a finite whole number of Celsius")
+    deci_c = int(value * 10)
+    # TLV order and payload were live readback-verified on a real boiler 2026-11-09.
+    return control_packet([(flag, deci_c.to_bytes(2, "big")),
+                           (BOILER_ID_FLAG, BOILER_ID.to_bytes(4, "big"))], **header)
+
+
+def target_command(temp_c: float, **header) -> bytes:
+    return _boiler_target_command(HEATING_TARGET_FLAG, temp_c, **header)
+
+
+def dhw_target_command(temp_c: float, **header) -> bytes:
+    return _boiler_target_command(HEATING_DHW_TARGET_FLAG, temp_c, **header)
+
+
 def decode_boiler_telemetry(packet: bytes) -> dict:
     """Decode only source-mapped BoilerBean TLVs from a response frame."""
     kind, fields = parse_packet(packet)
@@ -231,14 +251,17 @@ def decode_boiler_telemetry(packet: bytes) -> dict:
         value = target_temperature(fields[HEATING_TARGET_FLAG])
         if value is not None:
             state["target_temperature"] = value
+            state["heating_water_target_temperature"] = value
     if HEATING_CURRENT_FLAG in fields and len(fields[HEATING_CURRENT_FLAG]) == 2:
         state["current_temperature"] = int.from_bytes(
             fields[HEATING_CURRENT_FLAG], "big") / 10
     for flag, key in ((HEATING_DHW_CURRENT_FLAG, "dhw_current_temperature"),
                       (HEATING_DHW_TARGET_FLAG, "dhw_target_temperature")):
         raw = fields.get(flag)
-        if raw is not None and len(raw) == 2:
-            state[key] = int.from_bytes(raw, "big") / 10
+        if raw is not None:
+            value = target_temperature(raw)
+            if value is not None:
+                state[key] = value
     if HEATING_ACTIVE_FLAG in fields and len(fields[HEATING_ACTIVE_FLAG]) == 1:
         value = fields[HEATING_ACTIVE_FLAG][0]
         if value in (0, 1):

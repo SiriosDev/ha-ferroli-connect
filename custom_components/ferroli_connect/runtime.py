@@ -38,6 +38,8 @@ class FerroliRuntime:
         self._thermostat_task: asyncio.Task | None = None
         self._api = FerroliApi(async_get_clientsession(hass), entry.data["token"])
         self._thermostat_control_lock = asyncio.Lock()
+        self._boiler_control_lock = asyncio.Lock()
+        self._boiler_control_waiter: tuple[str, float, asyncio.Event] | None = None
 
     async def start(self) -> None:
         await self._api.current_user()
@@ -171,7 +173,32 @@ class FerroliRuntime:
         """Update telemetry and notify only for a decoded type-3 response."""
         update = decode_boiler_telemetry(payload)
         self.state.update(update)
+        waiter = self._boiler_control_waiter
+        if waiter and update.get(waiter[0]) == waiter[1]:
+            waiter[2].set()
         return update
+
+    async def control_boiler_setpoint(self, payload: bytes, *, state_key: str,
+                                      expected_value: float) -> None:
+        """Publish a boiler target and require the matching MQTT telemetry echo."""
+        async with self._boiler_control_lock:
+            event = asyncio.Event()
+            self._boiler_control_waiter = (state_key, expected_value, event)
+            try:
+                for attempt in range(3):
+                    if attempt:
+                        await asyncio.sleep(1)
+                    await self.publish(payload)
+                    try:
+                        await asyncio.wait_for(event.wait(), timeout=1)
+                        return
+                    except TimeoutError:
+                        continue
+                self.state.pop(state_key, None)
+                self.on_update(dict(self.state))
+                raise RuntimeError("Ferroli setpoint write was not confirmed by telemetry")
+            finally:
+                self._boiler_control_waiter = None
 
     async def control_thermostat(self, payload: bytes, *, expected_mode: int,
                                  expected_temperature: float | None = None) -> None:
