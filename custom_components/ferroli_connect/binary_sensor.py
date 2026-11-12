@@ -12,7 +12,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class FerroliHeatingActive(BinarySensorEntity):
     _attr_has_entity_name = True
-    _attr_name = "Heating active"
+    _attr_translation_key = "heating_active"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
 
     def __init__(self, hass, entry):
@@ -23,7 +23,7 @@ class FerroliHeatingActive(BinarySensorEntity):
         device = entry.data["device"]
         self._attr_device_info = {
             "identifiers": {(DOMAIN, str(device.get("slug")))},
-            "name": "Calefacción",
+            "translation_key": "heating",
             "manufacturer": "Ferroli",
         }
         self._attr_is_on = None

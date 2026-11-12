@@ -43,5 +43,29 @@
         }
       }
     }
-  }
+  },
+  "device": {
+    "heating": {"name": "Calefacción"},
+    "domestic_hot_water": {"name": "Agua caliente sanitaria (ACS)"}
+  },
+  "entity": {
+      "climate": {
+        "room_thermostat": {"name": "Termostato de ambiente"}
+      },
+      "binary_sensor": {
+        "heating_active": {"name": "Calefacción activa"}
+      },
+      "sensor": {
+        "heating_water_temperature": {"name": "Temperatura del agua de calefacción"},
+        "domestic_hot_water_temperature": {"name": "Temperatura del agua caliente sanitaria"},
+        "room_temperature": {"name": "Temperatura de ambiente"},
+        "room_target_temperature": {"name": "Objetivo de ambiente"},
+        "room_base_target_temperature": {"name": "Objetivo base de ambiente"},
+        "room_override_target_temperature": {"name": "Objetivo guardado de anulación"}
+      },
+      "number": {
+        "heating_water_target": {"name": "Objetivo del agua de calefacción"},
+        "domestic_hot_water_target": {"name": "Objetivo del agua caliente sanitaria"}
+      }
+    }
 }

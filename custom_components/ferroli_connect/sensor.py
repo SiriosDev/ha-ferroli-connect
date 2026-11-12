@@ -8,12 +8,15 @@ from .const import DOMAIN
 
 
 SENSORS = (
-    ("current_temperature", "heating_water_temperature", "Heating water temperature"),
-    ("dhw_current_temperature", "domestic_hot_water_temperature", "Domestic hot water temperature"),
-    ("room_temperature", "room_temperature", "Room temperature"),
-    ("room_target_temperature", "room_target_temperature", "Room target"),
-    ("room_base_target_temperature", "room_base_target_temperature", "Room base target"),
-    ("room_override_target_temperature", "room_override_target_temperature", "Room saved override target"),
+    ("current_temperature", "heating_water_temperature", "heating_water_temperature"),
+    ("dhw_current_temperature", "domestic_hot_water_temperature",
+     "domestic_hot_water_temperature"),
+    ("room_temperature", "room_temperature", "room_temperature"),
+    ("room_target_temperature", "room_target_temperature", "room_target_temperature"),
+    ("room_base_target_temperature", "room_base_target_temperature",
+     "room_base_target_temperature"),
+    ("room_override_target_temperature", "room_override_target_temperature",
+     "room_override_target_temperature"),
 )
 
 
@@ -28,12 +31,12 @@ class FerroliWaterSensor(SensorEntity):
     _attr_device_class = SensorDeviceClass.TEMPERATURE
     _attr_has_entity_name = True
 
-    def __init__(self, hass, entry, state_key, unique_suffix, name):
+    def __init__(self, hass, entry, state_key, unique_suffix, translation_key):
         self.hass = hass
         self.entry = entry
         self.runtime = hass.data[DOMAIN][entry.entry_id]
         self.state_key = state_key
-        self._attr_name = name
+        self._attr_translation_key = translation_key
         if state_key in ("current_temperature", "dhw_current_temperature", "room_temperature"):
             self._attr_state_class = SensorStateClass.MEASUREMENT
         device = entry.data["device"]
@@ -41,13 +44,13 @@ class FerroliWaterSensor(SensorEntity):
         if state_key.startswith("dhw_"):
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, f"{device.get('slug')}_dhw")},
-                "name": "Agua caliente sanitaria (ACS)",
+                "translation_key": "domestic_hot_water",
                 "manufacturer": "Ferroli",
             }
         else:
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, str(device.get("slug")))},
-                "name": "Calefacción",
+                "translation_key": "heating",
                 "manufacturer": "Ferroli",
             }
         self._attr_native_value = None

@@ -43,5 +43,29 @@
         }
       }
     }
-  }
+  },
+  "device": {
+    "heating": {"name": "Heating"},
+    "domestic_hot_water": {"name": "Domestic hot water"}
+  },
+  "entity": {
+      "climate": {
+        "room_thermostat": {"name": "Room thermostat"}
+      },
+      "binary_sensor": {
+        "heating_active": {"name": "Heating active"}
+      },
+      "sensor": {
+        "heating_water_temperature": {"name": "Heating water temperature"},
+        "domestic_hot_water_temperature": {"name": "Domestic hot water temperature"},
+        "room_temperature": {"name": "Room temperature"},
+        "room_target_temperature": {"name": "Room target"},
+        "room_base_target_temperature": {"name": "Room base target"},
+        "room_override_target_temperature": {"name": "Room saved override target"}
+      },
+      "number": {
+        "heating_water_target": {"name": "Heating water target"},
+        "domestic_hot_water_target": {"name": "Domestic hot water target"}
+      }
+    }
 }
