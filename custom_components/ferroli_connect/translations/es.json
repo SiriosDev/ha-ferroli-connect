@@ -1,14 +1,47 @@
 {
   "config": {
     "step": {
-      "user": {"title": "Ferroli Connect", "description": "Inicia sesión con tu cuenta de Ferroli Connect.", "data": {"username": "Nombre de usuario", "password": "Contraseña"}},
-      "device": {"title": "Selecciona el dispositivo", "data": {"device": "Dispositivo"}},
-      "reauth_confirm": {"title": "Reautenticación", "data": {"username": "Nombre de usuario", "password": "Contraseña"}}
+      "user": {
+        "title": "Ferroli Connect",
+        "description": "Inicia sesión con tu cuenta de Ferroli Connect.",
+        "data": {
+          "username": "Nombre de usuario",
+          "password": "Contraseña"
+        }
+      },
+      "device": {
+        "title": "Selecciona el dispositivo",
+        "data": {
+          "device": "Dispositivo"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reautenticación",
+        "data": {
+          "username": "Nombre de usuario",
+          "password": "Contraseña"
+        }
+      }
     },
-    "error": {"cannot_connect": "No se pudo iniciar sesión ni obtener los dispositivos.", "no_devices": "No se encontraron dispositivos.", "invalid_auth": "Nombre de usuario o contraseña incorrectos."},
-    "abort": {"reauth_successful": "Reautenticación completada"}
+    "error": {
+      "cannot_connect": "No se pudo iniciar sesión ni obtener los dispositivos.",
+      "no_devices": "No se encontraron dispositivos.",
+      "invalid_auth": "Nombre de usuario o contraseña incorrectos."
+    },
+    "abort": {
+      "reauth_successful": "Reautenticación completada"
+    }
   },
   "options": {
-    "step": {"init": {"title": "Seguridad del control", "description": "El control del termostato permite cambiar la temperatura objetivo de ambiente, confirmado en un equipo real. Por separado, el control de consignas de la caldera permite escribir las consignas de calefacción y agua caliente sanitaria, confirmadas en un equipo real el 2026-11-09.", "data": {"confirm_control": "Entiendo y activo el control de temperatura del termostato", "confirm_boiler_setpoints": "Entiendo y activo las consignas de agua de la caldera"}}}
+    "step": {
+      "init": {
+        "title": "Seguridad del control",
+        "description": "El control del termostato permite cambiar la temperatura objetivo de ambiente, confirmado en un equipo real. Por separado, el control de consignas de la caldera permite escribir las consignas de calefacción y agua caliente sanitaria, confirmadas en un equipo real el 2026-11-09.",
+        "data": {
+          "confirm_control": "Entiendo y activo el control de temperatura del termostato",
+          "confirm_boiler_setpoints": "Entiendo y activo las consignas de agua de la caldera"
+        }
+      }
+    }
   }
 }
