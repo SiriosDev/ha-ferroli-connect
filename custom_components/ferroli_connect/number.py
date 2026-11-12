@@ -11,9 +11,9 @@ from .const import DOMAIN
 
 
 NUMBERS = (
-    ("heating_water_target_temperature", "heating_water_target", "Heating water target",
+    ("heating_water_target_temperature", "heating_water_target", "heating_water_target",
      25, 85, False),
-    ("dhw_target_temperature", "domestic_hot_water_target", "Domestic hot water target",
+    ("dhw_target_temperature", "domestic_hot_water_target", "domestic_hot_water_target",
      30, 65, True),
 )
 
@@ -31,12 +31,13 @@ class FerroliWaterTargetNumber(NumberEntity):
     _attr_native_step = 1
     _attr_mode = NumberMode.BOX
 
-    def __init__(self, hass, entry, state_key, unique_suffix, name, minimum, maximum, dhw):
+    def __init__(self, hass, entry, state_key, unique_suffix, translation_key,
+                 minimum, maximum, dhw):
         self.hass = hass
         self.entry = entry
         self.runtime = hass.data[DOMAIN][entry.entry_id]
         self.state_key = state_key
-        self._attr_name = name
+        self._attr_translation_key = translation_key
         self._attr_native_min_value = minimum
         self._attr_native_max_value = maximum
         self._attr_native_value = None
@@ -47,13 +48,15 @@ class FerroliWaterTargetNumber(NumberEntity):
             self.flag = 0x2003
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, f"{device.get('slug')}_dhw")},
-                "name": "Agua caliente sanitaria (ACS)", "manufacturer": "Ferroli",
+                "translation_key": "domestic_hot_water",
+                "manufacturer": "Ferroli",
             }
         else:
             self.flag = 0x200B
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, str(device.get('slug')))},
-                "name": "Calefacción", "manufacturer": "Ferroli",
+                "translation_key": "heating",
+                "manufacturer": "Ferroli",
             }
 
     async def async_added_to_hass(self):

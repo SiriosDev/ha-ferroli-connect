@@ -16,7 +16,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class FerroliHeating(ClimateEntity):
     _attr_has_entity_name = True
-    _attr_name = "Room thermostat"
+    _attr_translation_key = "room_thermostat"
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
     _attr_supported_features = ClimateEntityFeature(0)
@@ -35,8 +35,11 @@ class FerroliHeating(ClimateEntity):
         children = device.get("child_devices", [])
         self.sdid = children[0].get("sdid") if len(children) == 1 and isinstance(children[0], dict) else None
         self._attr_unique_id = str(device.get("slug")) + "_heating"
-        self._attr_device_info = {"identifiers": {(DOMAIN, str(device.get("slug")))},
-                                  "name": "Calefacción", "manufacturer": "Ferroli"}
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, str(device.get("slug")))},
+            "translation_key": "heating",
+            "manufacturer": "Ferroli",
+        }
 
     async def async_added_to_hass(self):
         await super().async_added_to_hass()

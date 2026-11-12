@@ -1,14 +1,71 @@
 {
   "config": {
     "step": {
-      "user": {"title": "Ferroli Connect", "description": "Sign in with your Ferroli Connect account.", "data": {"username": "Username", "password": "Password"}},
-      "device": {"title": "Select device", "data": {"device": "Device"}},
-      "reauth_confirm": {"title": "Reauthenticate", "data": {"username": "Username", "password": "Password"}}
+      "user": {
+        "title": "Ferroli Connect",
+        "description": "Sign in with your Ferroli Connect account.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "device": {
+        "title": "Select device",
+        "data": {
+          "device": "Device"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      }
     },
-    "error": {"cannot_connect": "Unable to sign in or retrieve devices.", "no_devices": "No devices found.", "invalid_auth": "Invalid username or password."},
-    "abort": {"reauth_successful": "Re-authentication successful"}
+    "error": {
+      "cannot_connect": "Unable to sign in or retrieve devices.",
+      "no_devices": "No devices found.",
+      "invalid_auth": "Invalid username or password."
+    },
+    "abort": {
+      "reauth_successful": "Re-authentication successful"
+    }
   },
   "options": {
-    "step": {"init": {"title": "Control safety", "description": "Thermostat control enables the room temperature target, confirmed on real hardware. Separately, boiler setpoint control enables heating-water and domestic hot water writes, confirmed on real hardware on 2026-11-09.", "data": {"confirm_control": "I understand and enable thermostat temperature control", "confirm_boiler_setpoints": "I understand and enable boiler water setpoint controls"}}}
-  }
+    "step": {
+      "init": {
+        "title": "Control safety",
+        "description": "Thermostat control enables the room temperature target, confirmed on real hardware. Separately, boiler setpoint control enables heating-water and domestic hot water writes, confirmed on real hardware on 2026-11-09.",
+        "data": {
+          "confirm_control": "I understand and enable thermostat temperature control",
+          "confirm_boiler_setpoints": "I understand and enable boiler water setpoint controls"
+        }
+      }
+    }
+  },
+  "device": {
+    "heating": {"name": "Heating"},
+    "domestic_hot_water": {"name": "Domestic hot water"}
+  },
+  "entity": {
+      "climate": {
+        "room_thermostat": {"name": "Room thermostat"}
+      },
+      "binary_sensor": {
+        "heating_active": {"name": "Heating active"}
+      },
+      "sensor": {
+        "heating_water_temperature": {"name": "Heating water temperature"},
+        "domestic_hot_water_temperature": {"name": "Domestic hot water temperature"},
+        "room_temperature": {"name": "Room temperature"},
+        "room_target_temperature": {"name": "Room target"},
+        "room_base_target_temperature": {"name": "Room base target"},
+        "room_override_target_temperature": {"name": "Room saved override target"}
+      },
+      "number": {
+        "heating_water_target": {"name": "Heating water target"},
+        "domestic_hot_water_target": {"name": "Domestic hot water target"}
+      }
+    }
 }

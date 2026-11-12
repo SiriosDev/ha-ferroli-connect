@@ -72,7 +72,7 @@ def test_setup_failure_closes_runtime_and_delegates_reauth_to_home_assistant():
 def test_climate_does_not_claim_unverified_control_or_state():
     climate = (ROOT / "climate.py").read_text()
     assert "_attr_available = False" in climate
-    assert '"Room thermostat"' in climate
+    assert '_attr_translation_key = "room_thermostat"' in climate
     assert "control_thermostat" in climate
     assert "relay_command" not in climate
     assert "DHW" not in climate
@@ -87,16 +87,18 @@ def test_climate_does_not_claim_unverified_control_or_state():
 def test_water_sensor_platform_is_distinct_and_read_only():
     assert '"sensor"' in (ROOT / "const.py").read_text()
     sensor = (ROOT / "sensor.py").read_text()
-    assert "Heating water temperature" in sensor
-    assert "Domestic hot water temperature" in sensor
+    assert '_attr_translation_key = translation_key' in sensor
+    assert '"heating_water_temperature"' in sensor
+    assert '"domestic_hot_water_temperature"' in sensor
     assert "Heating water target" not in sensor  # targets moved to number.py (v0.1.6+)
     assert "Domestic hot water target" not in sensor
     assert ".publish(" not in sensor
     number = (ROOT / "number.py").read_text()
-    assert "Heating water target" in number
-    assert "Domestic hot water target" in number
+    assert '_attr_translation_key = translation_key' in number
+    assert '"heating_water_target"' in number
+    assert '"domestic_hot_water_target"' in number
     climate = (ROOT / "climate.py").read_text()
-    assert '_attr_name = "Room thermostat"' in climate
+    assert '_attr_translation_key = "room_thermostat"' in climate
     assert 'if not self.entry.options.get("confirm_control", False)' in climate
 
 
@@ -143,15 +145,20 @@ def test_translation_keys_match_and_only_confirmed_writes_are_described():
         assert "domestic hot water" in description or "agua caliente sanitaria" in description
         assert "2026-11-09" in description
         assert "confirm_boiler_setpoints" in translation["options"]["step"]["init"]["data"]
+        assert set(translation["device"]) == {"heating", "domestic_hot_water"}
+        assert set(translation["entity"]) == {"climate", "binary_sensor", "sensor", "number"}
+        assert translation["entity"]["climate"]["room_thermostat"]["name"]
+        assert translation["entity"]["binary_sensor"]["heating_active"]["name"]
 
 
 def test_room_thermostat_api_is_read_only_and_sensors_are_separate():
     api = (ROOT / "api.py").read_text()
     assert '"GET", path' in api
     assert "thermostat_points" in api and "thermostat_points" in (ROOT / "runtime.py").read_text()
-    assert "Room temperature" in (ROOT / "sensor.py").read_text()
-    assert "Room target" in (ROOT / "sensor.py").read_text()
-    assert "Room base target" in (ROOT / "sensor.py").read_text()
+    sensor = (ROOT / "sensor.py").read_text()
+    assert '"room_temperature"' in sensor
+    assert '"room_target_temperature"' in sensor
+    assert '"room_base_target_temperature"' in sensor
     runtime = (ROOT / "runtime.py").read_text()
     assert "control_thermostat" in runtime and "readback did not confirm" in runtime
 
@@ -160,9 +167,10 @@ def test_logical_heating_and_acs_devices_preserve_entity_ids():
     sensor = (ROOT / "sensor.py").read_text()
     climate = (ROOT / "climate.py").read_text()
     binary = (ROOT / "binary_sensor.py").read_text()
-    assert '"name": "Calefacción"' in sensor and '"name": "Calefacción"' in climate
-    assert '"name": "Calefacción"' in binary
-    assert '"name": "Agua caliente sanitaria (ACS)"' in sensor
+    assert '"translation_key": "heating"' in sensor
+    assert '"translation_key": "heating"' in climate
+    assert '"translation_key": "heating"' in binary
+    assert '"translation_key": "domestic_hot_water"' in sensor
     assert 'f"{device.get(\'slug\')}_dhw"' in sensor
     assert 'f"{device.get(\'slug\')}_{unique_suffix}"' in sensor
     assert 'str(device.get("slug")) + "_heating"' in climate
@@ -192,7 +200,7 @@ def test_saved_override_sensor_is_read_only_and_cleared_on_poll_failure():
     sensor = (ROOT / "sensor.py").read_text()
     runtime = (ROOT / "runtime.py").read_text()
     assert '"room_override_target_temperature"' in sensor
-    assert '"Room saved override target"' in sensor
+    assert '"room_override_target_temperature"' in sensor
     assert '.publish(' not in sensor
     assert runtime.count('"room_override_target_temperature"') >= 2
 

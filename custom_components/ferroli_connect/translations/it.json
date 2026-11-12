@@ -1,0 +1,71 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ferroli Connect",
+        "description": "Accedi con il tuo account Ferroli Connect.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "device": {
+        "title": "Seleziona Dispositivo",
+        "data": {
+          "device": "Dispositivo"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reautenticazione",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossibile Accedere o Recuperare i Dispositivi.",
+      "no_devices": "Nessun Dispositivo Trovato.",
+      "invalid_auth": "Username o Password non Validi."
+    },
+    "abort": {
+      "reauth_successful": "Reautenticazione Completata con Successo"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Controllo di Sicurezza",
+        "description": "Il Controllo del Termostato consente di modificare la Temperatura Obiettivo dell'Ambiente. Separatamente, il Controllo delle Impostazioni della Caldaia consente di sovrascrivere le Impostazioni del Riscaldamento dell'Acqua Calda Sanitaria",
+        "data": {
+          "confirm_control": "Ho Capito e Attivo il Controllo della Temperatura del Termostato",
+          "confirm_boiler_setpoints": "Ho Capito e Attivo il Controllo delle Impostazioni della Caldaia"
+        }
+      }
+    }
+  },
+  "device": {
+    "heating": {"name": "Riscaldamento"},
+    "domestic_hot_water": {"name": "Acqua Calda Sanitaria"}
+  },
+  "entity": {
+      "climate": {
+        "room_thermostat": {"name": "Termostato Ambiente"}
+      },
+      "binary_sensor": {
+        "heating_active": {"name": "Riscaldamento Attivo"}
+      },
+      "sensor": {
+        "heating_water_temperature": {"name": "Temperatura Riscaldamento"},
+        "domestic_hot_water_temperature": {"name": "Temperatura Acqua Calda Sanitaria"},
+        "room_temperature": {"name": "Temperatura Ambiente"},
+        "room_target_temperature": {"name": "Obiettivo Ambiente"},
+        "room_base_target_temperature": {"name": "Obiettivo Base Ambiente"},
+        "room_override_target_temperature": {"name": "Sovrascrittura Obiettivo Ambiente Salvato"}
+      },
+      "number": {
+        "heating_water_target": {"name": "Temperatura Obiettivo Riscaldamento"},
+        "domestic_hot_water_target": {"name": "Temperatura Acqua Calda Sanitaria"}
+      }
+    }
+}
